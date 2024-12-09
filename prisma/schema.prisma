@@ -1,0 +1,91 @@
+// This is your Prisma schema file
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String       @id @default(cuid())
+  clerkId       String       @unique // For Clerk authentication
+  email         String       @unique
+  name          String?
+  imageUrl      String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  transactions  Transaction[]
+  categories    Category[]
+  tags          Tag[]
+}
+
+model Transaction {
+  id          String    @id @default(cuid())
+  type        TransactionType
+  amount      Float
+  date        DateTime
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id])
+  tags        TagsOnTransactions[]
+
+  @@index([userId])
+  @@index([categoryId])
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  name         String
+  type         TransactionType
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  // Relations
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([name, userId])
+  @@index([userId])
+}
+
+model Tag {
+  id           String               @id @default(cuid())
+  name         String
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  
+  // Relations
+  userId       String
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions TagsOnTransactions[]
+
+  @@unique([name, userId])
+  @@index([userId])
+}
+
+// Junction table for many-to-many relation between Transaction and Tag
+model TagsOnTransactions {
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  tagId         String
+  tag           Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  assignedAt    DateTime   @default(now())
+
+  @@id([transactionId, tagId])
+  @@index([transactionId])
+  @@index([tagId])
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+} 

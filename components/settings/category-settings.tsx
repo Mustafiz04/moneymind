@@ -1,104 +1,116 @@
 "use client"
 
 import { useState } from "react"
+import { useCategories } from "@/hooks/use-categories"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, X } from "lucide-react"
-
-type Category = {
-  id: string
-  name: string
-  type: "income" | "expense"
-}
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Trash2 } from "lucide-react"
+import { Category, TransactionType } from "@/types/supabase"
 
 export function CategorySettings() {
-  const [categories, setCategories] = useState<Category[]>([
-    { id: "1", name: "Salary", type: "income" },
-    { id: "2", name: "Food", type: "expense" },
-    { id: "3", name: "Transport", type: "expense" },
-  ])
+  const { categories, isLoading, addCategory, isAdding, deleteCategory } = useCategories()
   const [newCategory, setNewCategory] = useState("")
-  const [selectedType, setSelectedType] = useState<"income" | "expense">("expense")
+  const [type, setType] = useState<TransactionType>("EXPENSE")
 
-  const addCategory = () => {
-    if (newCategory.trim()) {
-      setCategories([
-        ...categories,
-        { id: Date.now().toString(), name: newCategory, type: selectedType },
-      ])
-      setNewCategory("")
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newCategory.trim()) return
+
+    addCategory(
+      { name: newCategory.trim(), type },
+      {
+        onSuccess: () => {
+          setNewCategory("")
+        },
+      }
+    )
   }
 
-  const removeCategory = (id: string) => {
-    setCategories(categories.filter((cat) => cat.id !== id))
+  if (isLoading) {
+    return <div>Loading...</div>
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Category Management</CardTitle>
+        <CardTitle>Categories</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex gap-4">
-          <div className="flex-1">
+        <form 
+            onSubmit={handleSubmit} 
+            className="flex flex-col sm:flex-row gap-4"
+            >
             <Input
-              placeholder="New category name"
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="New category name"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                className="w-full"
             />
-          </div>
-          <Button variant="outline" onClick={() => setSelectedType("income")}>
-            Income
-          </Button>
-          <Button variant="outline" onClick={() => setSelectedType("expense")}>
-            Expense
-          </Button>
-          <Button onClick={addCategory}>
-            <Plus className="h-4 w-4" />
-            Add
-          </Button>
-        </div>
+            <Select
+                value={type}
+                onValueChange={(value) => setType(value as TransactionType)}
+            >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="INCOME">Income</SelectItem>
+                <SelectItem value="EXPENSE">Expense</SelectItem>
+                </SelectContent>
+            </Select>
+            <Button type="submit" disabled={isAdding} className="w-full sm:w-auto">
+                Add Category
+            </Button>
+        </form>
 
         <div className="space-y-4">
-          <h3 className="font-semibold">Income Categories</h3>
-          <div className="space-y-2">
+          <h3 className="font-medium">Income Categories</h3>
+          <div className="grid gap-2">
             {categories
-              .filter((cat) => cat.type === "income")
-              .map((category) => (
+              ?.filter((cat: Category) => cat.type === "INCOME")
+              .map((category: Category) => (
                 <div
                   key={category.id}
-                  className="flex items-center justify-between p-2 rounded-lg border"
+                  className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <span>{category.name}</span>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    onClick={() => removeCategory(category.id)}
+                    size="icon"
+                    onClick={() => deleteCategory(category.id)}
                   >
-                    <X className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
           </div>
+        </div>
 
-          <h3 className="font-semibold">Expense Categories</h3>
-          <div className="space-y-2">
+        <div className="space-y-4">
+          <h3 className="font-medium">Expense Categories</h3>
+          <div className="grid gap-2">
             {categories
-              .filter((cat) => cat.type === "expense")
-              .map((category) => (
+              ?.filter((cat: Category) => cat.type === "EXPENSE")
+              .map((category: Category) => (
                 <div
                   key={category.id}
-                  className="flex items-center justify-between p-2 rounded-lg border"
+                  className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <span>{category.name}</span>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    onClick={() => removeCategory(category.id)}
+                    size="icon"
+                    onClick={() => deleteCategory(category.id)}
                   >
-                    <X className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               ))}

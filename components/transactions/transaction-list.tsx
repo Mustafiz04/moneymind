@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -8,174 +8,228 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Pencil, Trash } from "lucide-react"
-import { format } from "date-fns"
-import { Transaction } from "@/types"
-import { cn } from "@/lib/utils"
-import { DateRange } from "react-day-picker"
-
-const transactions = [
-  {
-    id: "1",
-    type: "expense",
-    amount: 85.50,
-    category: "Food",
-    tags: "groceries, food",
-    date: new Date("2024-03-15"),
-    notes: "Weekly grocery shopping"
-  },
-  {
-    id: "2",
-    type: "income",
-    amount: 3200.00,
-    category: "Salary",
-    tags: "work",
-    date: new Date("2024-03-14"),
-    notes: "Monthly salary"
-  },
-  // Add more sample transactions...
-]
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal, Pencil, Trash } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useTransactionsList } from "@/hooks/use-transactions-list";
+import { useRouter } from "next/navigation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useCurrency } from "@/hooks/use-currency";
+import { formatCurrency } from "@/lib/format";
 
 interface TransactionListProps {
   filters: {
     type: string;
     category: string;
-    dateRange: DateRange | undefined;
+    dateRange: { from: Date; to: Date } | undefined;
     searchTag: string;
-  }
+  };
 }
 
 export function TransactionList({ filters }: TransactionListProps) {
-  const [filteredTransactions, setFilteredTransactions] = useState(transactions)
+  const router = useRouter();
+  const { transactions, isLoading, deleteTransaction, isDeleting } =
+    useTransactionsList(filters);
 
-  useEffect(() => {
-    let filtered = [...transactions]
+const { data: currencySymbol = "₹" } = useCurrency();
 
-    // Filter by type
-    if (filters.type !== 'all') {
-      filtered = filtered.filter(t => t.type === filters.type)
+  const handleEdit = (id: string) => {
+    router.push(`/dashboard/transactions/edit/${id}`);
+  };
+
+  const handleDelete = async (id: string, e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+
+    try {
+      await deleteTransaction(id, {
+        onSuccess: () => {
+          console.log("Transaction deleted successfully");
+        },
+        onError: (error) => {
+          console.error("Failed to delete transaction:", error);
+        },
+      });
+    } catch (error) {
+      console.error("Failed to delete transaction:", error);
     }
+  };
 
-    // Filter by category
-    if (filters.category !== 'all') {
-      filtered = filtered.filter(t => t.category.toLowerCase() === filters.category)
-    }
-
-    // Filter by date range
-    if (filters.dateRange?.from) {
-      const fromDate = filters.dateRange.from
-      const toDate = filters.dateRange.to
-      filtered = filtered.filter(t => {
-        const transactionDate = new Date(t.date)
-        if (toDate) {
-          return transactionDate >= fromDate && transactionDate <= toDate
-        }
-        return transactionDate >= fromDate
-      })
-    }
-
-    // Filter by tag search
-    if (filters.searchTag) {
-      filtered = filtered.filter(t => 
-        t.tags.toLowerCase().includes(filters.searchTag.toLowerCase())
-      )
-    }
-
-    setFilteredTransactions(filtered)
-  }, [filters])
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="rounded-md border overflow-hidden">
+    <div className="relative rounded-md border">
       {/* Desktop View */}
-      <div className="hidden md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Tags</TableHead>
-              <TableHead>Notes</TableHead>
-              <TableHead className="w-[70px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTransactions.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell>{format(transaction.date, "MMM dd, yyyy")}</TableCell>
-                <TableCell className="capitalize">{transaction.type}</TableCell>
-                <TableCell>{transaction.category}</TableCell>
-                <TableCell className={transaction.type === "income" ? "text-green-600" : "text-red-600"}>
-                  {transaction.type === "income" ? "+" : "-"}${transaction.amount.toFixed(2)}
-                </TableCell>
-                <TableCell>{transaction.tags}</TableCell>
-                <TableCell>{transaction.notes}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">
-                        <Trash className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+      <div className="hidden md:block overflow-x-auto">
+        <div className="min-w-[800px]">
+          {" "}
+          {/* Minimum width to prevent squishing */}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[120px]">Date</TableHead>
+                <TableHead className="w-[100px]">Type</TableHead>
+                <TableHead className="w-[150px]">Category</TableHead>
+                <TableHead className="w-[120px]">Amount</TableHead>
+                <TableHead className="min-w-[200px]">Notes</TableHead>
+                <TableHead className="min-w-[200px]">Tags</TableHead>
+                <TableHead className="w-[70px] sticky right-0 bg-background">
+                  Actions
+                </TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {transactions?.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell>
+                    {format(new Date(transaction.date), "MMM dd, yyyy")}
+                  </TableCell>
+                  <TableCell className="capitalize">
+                    {transaction.type.toLowerCase()}
+                  </TableCell>
+                  <TableCell>{transaction.category.name}</TableCell>
+                  <TableCell
+                    className={
+                      transaction.type === "INCOME"
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }
+                  >
+                    {transaction.type === "INCOME" ? "+" : "-"}
+                    {formatCurrency(transaction.amount, currencySymbol)}
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate">
+                    {transaction.notes}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {transaction.tags?.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="sticky right-0 bg-background">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleEdit(transaction.id)}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onSelect={(e) => e.preventDefault()}
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete Transaction
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this
+                                transaction? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={(e) => handleDelete(transaction.id, e)}
+                                className="bg-red-600 hover:bg-red-700"
+                                disabled={isDeleting}
+                              >
+                                {isDeleting ? "Deleting..." : "Delete"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Mobile View */}
       <div className="md:hidden">
-        {filteredTransactions.map((transaction) => (
-          <div
-            key={transaction.id}
-            className="border-b p-4 space-y-2"
-          >
+        {transactions?.map((transaction) => (
+          <div key={transaction.id} className="border-b p-4 space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-medium">
                 {format(new Date(transaction.date), "MMM dd, yyyy")}
               </span>
-              <span className={cn(
-                "font-medium",
-                transaction.type === "income" ? "text-green-600" : "text-red-600"
-              )}>
-                {transaction.type === "income" ? "+" : "-"}${transaction.amount.toFixed(2)}
+              <span
+                className={cn(
+                  "font-medium",
+                  transaction.type === "INCOME"
+                    ? "text-green-600"
+                    : "text-red-600"
+                )}
+              >
+                {transaction.type === "INCOME" ? "+" : "-"}$
+                {transaction.amount.toFixed(2)}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span className="capitalize">{transaction.type}</span>
-              <span>{transaction.category}</span>
+              <span className="capitalize">
+                {transaction.type.toLowerCase()}
+              </span>
+              <span>{transaction.category.name}</span>
             </div>
-            {transaction.tags && (
-              <div className="text-sm text-muted-foreground">
-                Tags: {transaction.tags}
-              </div>
-            )}
             {transaction.notes && (
               <div className="text-sm text-muted-foreground">
                 {transaction.notes}
               </div>
             )}
+            <div className="flex flex-wrap gap-1 mt-2">
+              {transaction.tags?.map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-secondary"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
             <div className="flex justify-end pt-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -184,14 +238,40 @@ export function TransactionList({ filters }: TransactionListProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleEdit(transaction.id)}>
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-600">
-                    <Trash className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem
+                        className="text-red-600"
+                        onSelect={(e) => e.preventDefault()}
+                      >
+                        <Trash className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete this transaction? This
+                          action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={(e) => handleDelete(transaction.id, e)}
+                          className="bg-red-600 hover:bg-red-700"
+                          disabled={isDeleting}
+                        >
+                          {isDeleting ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -199,5 +279,5 @@ export function TransactionList({ filters }: TransactionListProps) {
         ))}
       </div>
     </div>
-  )
-} 
+  );
+}

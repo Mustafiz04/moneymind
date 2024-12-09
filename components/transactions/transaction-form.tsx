@@ -1,9 +1,11 @@
-"use client"
+"use client";
 
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Button } from "@/components/ui/button"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -11,62 +13,100 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+  FormDescription,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { useCategories } from "@/hooks/use-categories";
+import { useTransactionsForm } from "@/hooks/use-transactions-form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Calendar } from "@/components/ui/calendar"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { Calendar as CalendarIcon } from "lucide-react"
+} from "@/components/ui/select";
+import { useTransactionsList } from "@/hooks/use-transactions-list";
+import { invalidateReports } from "@/hooks/use-reports"
+import { Category, TransactionType } from "@/types/supabase";
 
-const transactionSchema = z.object({
-  type: z.enum(["income", "expense"]),
-  amount: z.string().min(1, "Amount is required"),
-  category: z.string().min(1, "Category is required"),
-  tags: z.string(),
-  date: z.date({
-    required_error: "Date is required",
-  }),
-  notes: z.string(),
-})
+const formSchema = z.object({
+  type: z.enum(["INCOME", "EXPENSE"]),
+  amount: z.number().positive(),
+  date: z.date(),
+  category_id: z.string().min(1, "Category is required"),
+  notes: z.string().optional(),
+  tags: z.string().optional(),
+});
 
-const categories = {
-  income: ["Salary", "Freelance", "Investments", "Other"],
-  expense: ["Food", "Transport", "Bills", "Entertainment", "Shopping", "Other"],
+interface TransactionFormProps {
+  defaultValues?: {
+    type: TransactionType
+    amount: number
+    date: Date
+    category_id: string
+    notes?: string
+  }
+  transactionId?: string
+  onSubmit?: (data: any) => Promise<void>
 }
 
-type TransactionData = z.infer<typeof transactionSchema>
+export function TransactionForm({ defaultValues, transactionId }: TransactionFormProps) {
+  const router = useRouter();
+  const { categories } = useCategories();
+  const { addTransaction, isAdding } = useTransactionsForm();
+  const { updateTransaction, isUpdating } = useTransactionsList({ 
+    type: 'all', 
+    category: 'all',
+    dateRange: undefined,
+    searchTag: ''
+  });
 
-export function TransactionForm({ 
-  initialData = null,
-  onSubmit 
-}: { 
-  initialData?: TransactionData | null,
-  onSubmit: (data: TransactionData) => void 
-}) {
-  const form = useForm<TransactionData>({
-    resolver: zodResolver(transactionSchema),
-    defaultValues: initialData || {
-      type: "expense",
-      amount: "",
-      category: "",
-      tags: "",
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: defaultValues || {
+      type: "EXPENSE",
+      amount: undefined,
       date: new Date(),
       notes: "",
     },
-  })
+  });
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (transactionId) {
+      // Update existing transaction
+      await updateTransaction(
+        { id: transactionId, ...values },
+        {
+          onSuccess: () => {
+            invalidateReports()
+            router.push("/dashboard/transactions");
+          },
+        }
+      );
+    } else {
+      // Create new transaction
+      await addTransaction(values, {
+        onSuccess: () => {
+          invalidateReports()
+          router.push("/dashboard/transactions");
+        },
+      });
+    }
+  };
+
+  const type = form.watch("type");
+  const filteredCategories =
+    categories?.filter((cat: Category) => cat.type === type) || [];
 
   return (
     <Form {...form}>
@@ -84,8 +124,33 @@ export function TransactionForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="income">Income</SelectItem>
-                  <SelectItem value="expense">Expense</SelectItem>
+                  <SelectItem value="EXPENSE">Expense</SelectItem>
+                  <SelectItem value="INCOME">Income</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="category_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Category</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {filteredCategories.map((category: Category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -100,46 +165,12 @@ export function TransactionForm({
             <FormItem>
               <FormLabel>Amount</FormLabel>
               <FormControl>
-                <Input placeholder="0.00" {...field} type="number" step="0.01" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="category"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Category</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {categories[form.watch("type") as keyof typeof categories].map((category) => (
-                    <SelectItem key={category} value={category.toLowerCase()}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="tags"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tags</FormLabel>
-              <FormControl>
-                <Input placeholder="Comma separated tags" {...field} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                  value={field.value}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -150,7 +181,7 @@ export function TransactionForm({
           control={form.control}
           name="date"
           render={({ field }) => (
-            <FormItem className="flex flex-col">
+            <FormItem>
               <FormLabel>Date</FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
@@ -158,7 +189,7 @@ export function TransactionForm({
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-[240px] pl-3 text-left font-normal",
+                        "w-full pl-3 text-left font-normal",
                         !field.value && "text-muted-foreground"
                       )}
                     >
@@ -176,7 +207,7 @@ export function TransactionForm({
                     mode="single"
                     selected={field.value}
                     onSelect={field.onChange}
-                    disabled={(date: Date) =>
+                    disabled={(date) =>
                       date > new Date() || date < new Date("1900-01-01")
                     }
                     initialFocus
@@ -195,17 +226,37 @@ export function TransactionForm({
             <FormItem>
               <FormLabel>Notes</FormLabel>
               <FormControl>
-                <Textarea placeholder="Add any additional notes" {...field} />
+                <Textarea {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <Button type="submit">
-          {initialData ? "Update" : "Add"} Transaction
+        <FormField
+          control={form.control}
+          name="tags"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tags (comma separated)</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="e.g. groceries, food, monthly"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+              <FormDescription>
+                Enter tags separated by commas
+              </FormDescription>
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" disabled={isAdding}>
+          {isAdding ? "Adding..." : "Add Transaction"}
         </Button>
       </form>
     </Form>
-  )
-} 
+  );
+}

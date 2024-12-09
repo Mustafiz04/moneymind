@@ -1,34 +1,39 @@
+"use client"
+
+import { useTransactions } from "@/hooks/use-transactions"
 import { OverviewCards } from "@/components/dashboard/overview-cards"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TransactionChart } from "@/components/reports/transaction-chart"
+import { TransactionChart } from "@/components/dashboard/transaction-chart"
 import { QuickActions } from "@/components/dashboard/quick-actions"
 import { RecentTransactions } from "@/components/dashboard/recent-transactions"
-import { Transaction } from "@/types"
-
-// Sample transactions for the chart
-const transactions: Transaction[] = [
-  {
-    id: "1",
-    type: "expense" as const,
-    amount: 85.50,
-    category: "Food",
-    tags: "groceries",
-    date: new Date("2024-03-15"),
-    notes: "Weekly grocery shopping"
-  },
-  {
-    id: "2",
-    type: "income" as const,
-    amount: 3200.00,
-    category: "Salary",
-    tags: "work",
-    date: new Date("2024-03-01"),
-    notes: "Monthly salary"
-  },
-  // Add more transactions as needed...
-]
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function DashboardPage() {
+  const { transactions, isLoading } = useTransactions()
+
+  if (isLoading) {
+    return (
+      <div className="container max-w-7xl mx-auto space-y-8">
+        <div className="flex flex-col gap-y-8">
+          <div>
+            <Skeleton className="h-8 w-[200px]" />
+            <Skeleton className="h-4 w-[300px] mt-2" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Skeleton className="h-[120px]" />
+            <Skeleton className="h-[120px]" />
+            <Skeleton className="h-[120px]" />
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            <Skeleton className="h-[400px] col-span-2" />
+            <Skeleton className="h-[400px]" />
+          </div>
+          <Skeleton className="h-[400px]" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="container max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col gap-y-8">
@@ -40,8 +45,8 @@ export default function DashboardPage() {
             Here is an overview of your finances
           </p>
         </div>
-        
-        <OverviewCards />
+
+        <OverviewCards transactions={transactions} />
         
         <div className="grid gap-6 md:grid-cols-3">
           <div className="col-span-2">
@@ -52,7 +57,7 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <TransactionChart period="monthly" transactions={transactions} />
+                <TransactionChart transactions={transactions} />
               </CardContent>
             </Card>
           </div>
@@ -60,8 +65,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <RecentTransactions />
-          {/* Additional widget can go here */}
+          <RecentTransactions transactions={transactions.slice(0, 5)} />
         </div>
       </div>
     </div>

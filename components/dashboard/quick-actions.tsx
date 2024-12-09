@@ -1,5 +1,7 @@
-import { Button } from "@/components/ui/button"
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Plus, FileText, History } from "lucide-react"
 import Link from "next/link"
 
@@ -9,20 +11,20 @@ export function QuickActions() {
       <CardHeader>
         <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-4">
-        <Button className="w-full justify-start bg-green-500 hover:bg-green-600" asChild>
+      <CardContent className="space-y-4">
+        <Button asChild className="w-full justify-start" variant="outline">
           <Link href="/dashboard/transactions/new">
             <Plus className="mr-2 h-4 w-4" />
-            Add New Transaction
+            Add Transaction
           </Link>
         </Button>
-        <Button className="w-full justify-start bg-blue-500 hover:bg-blue-600" asChild>
+        <Button asChild className="w-full justify-start" variant="outline">
           <Link href="/dashboard/reports">
             <FileText className="mr-2 h-4 w-4" />
             View Reports
           </Link>
         </Button>
-        <Button className="w-full justify-start bg-purple-500 hover:bg-purple-600" asChild>
+        <Button asChild className="w-full justify-start" variant="outline">
           <Link href="/dashboard/transactions">
             <History className="mr-2 h-4 w-4" />
             Transaction History

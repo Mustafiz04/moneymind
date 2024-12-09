@@ -1,27 +1,39 @@
-import { authMiddleware } from "@clerk/nextjs"
+import { authMiddleware, clerkClient } from "@clerk/nextjs"
+import { supabase } from "@/lib/supabase"
 
-// This example protects all routes including api/trpc routes
-// Please edit this to allow other routes to be public as needed.
-// See https://clerk.com/docs/references/nextjs/auth-middleware for more information about configuring your middleware
 export default authMiddleware({
   publicRoutes: ["/"],
-  afterAuth(auth, req, evt) {
-    // handle users who aren't authenticated
-    if (!auth.userId && !auth.isPublicRoute) {
-      return Response.redirect(new URL('/', req.url))
-    }
+  async afterAuth(auth, req, evt) {
+    if (!auth.userId) return;
+
+    // try {
+    //   // Get user from Clerk
+    //   const user = await clerkClient.users.getUser(auth.userId);
+      
+    //   // Upsert user in Supabase using clerk_id as conflict key
+    //   const { error } = await supabase
+    //     .from('users')
+    //     .upsert({
+    //       id: user.id,
+    //       clerk_id: user.id,
+    //       email: user.emailAddresses[0]?.emailAddress,
+    //       name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+    //       image_url: user.imageUrl,
+    //     }, {
+    //       onConflict: 'clerk_id',
+    //       ignoreDuplicates: true
+    //     })
+
+    //   if (error) {
+    //     console.error('Error syncing user to Supabase:', error)
+    //   }
+
+    // } catch (error) {
+    //   console.error('Error in afterAuth middleware:', error)
+    // }
   }
-});
+})
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
 }

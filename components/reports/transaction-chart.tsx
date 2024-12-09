@@ -5,75 +5,20 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recha
 import { Transaction } from "@/types"
 import { format, startOfWeek, endOfWeek, getWeek } from "date-fns"
 import { DateRange } from "react-day-picker"
+import { useCurrency } from "@/hooks/use-currency"
 
-interface TransactionChartProps {
-  period: string;
-  dateRange?: DateRange;
-  transactions: Transaction[];
+interface ChartProps {
+  period: string
+  dateRange?: DateRange
+  data: Array<{
+    date: string
+    income: number
+    expense: number
+  }>
 }
 
-export function TransactionChart({ period, dateRange, transactions }: TransactionChartProps) {
-  const getFilteredData = () => {
-    let filteredTransactions = [...transactions]
-    
-    // Filter by date range if provided
-    if (dateRange?.from) {
-      const fromDate = dateRange.from
-      filteredTransactions = filteredTransactions.filter(t => {
-        const date = new Date(t.date)
-        if (dateRange.to) {
-          return date >= fromDate && date <= dateRange.to
-        }
-        return date >= fromDate
-      })
-    }
-
-    // Sort transactions by date
-    filteredTransactions.sort((a, b) => a.date.getTime() - b.date.getTime())
-
-    // Group transactions based on period
-    const groupedData = new Map()
-
-    filteredTransactions.forEach(transaction => {
-      const date = new Date(transaction.date)
-      let key: string
-
-      switch (period) {
-        case 'daily':
-          key = format(date, 'MMM dd')
-          break
-        case 'weekly': {
-          const weekStart = startOfWeek(date)
-          const weekNumber = getWeek(date)
-          key = `Week ${weekNumber}`
-          break
-        }
-        case 'monthly':
-          key = format(date, 'MMM yyyy')
-          break
-        case 'yearly':
-          key = format(date, 'yyyy')
-          break
-        default:
-          key = format(date, 'MMM dd')
-      }
-
-      if (!groupedData.has(key)) {
-        groupedData.set(key, { name: key, income: 0, expenses: 0 })
-      }
-
-      const entry = groupedData.get(key)
-      if (transaction.type === 'income') {
-        entry.income += transaction.amount
-      } else {
-        entry.expenses += transaction.amount
-      }
-    })
-
-    return Array.from(groupedData.values())
-  }
-
-  const chartData = getFilteredData()
+export function TransactionChart({ data }: ChartProps) {
+  const { data: currencySymbol = "₹" } = useCurrency();
 
   return (
     <Card>
@@ -83,7 +28,7 @@ export function TransactionChart({ period, dateRange, transactions }: Transactio
       <CardContent>
         <div className="h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
+            <BarChart data={data}>
               <XAxis 
                 dataKey="name" 
                 stroke="#888888" 
@@ -96,7 +41,7 @@ export function TransactionChart({ period, dateRange, transactions }: Transactio
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => `$${value}`}
+                tickFormatter={(value) => `${currencySymbol}${value}`}
               />
               <Tooltip 
                 cursor={{ fill: 'transparent' }}
@@ -130,7 +75,7 @@ export function TransactionChart({ period, dateRange, transactions }: Transactio
                 radius={[4, 4, 0, 0]} 
               />
               <Bar 
-                dataKey="expenses" 
+                dataKey="expense" 
                 name="Expenses"
                 fill="#ef4444" 
                 radius={[4, 4, 0, 0]} 
