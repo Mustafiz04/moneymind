@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TransactionChart } from "@/components/reports/transaction-chart"
 import { QuickActions } from "@/components/dashboard/quick-actions"
 import { RecentTransactions } from "@/components/dashboard/recent-transactions"
+import { Transaction } from "@/types"
 
 // Sample transactions for the chart
-const transactions = [
+const transactions: Transaction[] = [
   {
     id: "1",
-    type: "expense",
+    type: "expense" as const,
     amount: 85.50,
     category: "Food",
     tags: "groceries",
@@ -17,7 +18,7 @@ const transactions = [
   },
   {
     id: "2",
-    type: "income",
+    type: "income" as const,
     amount: 3200.00,
     category: "Salary",
     tags: "work",

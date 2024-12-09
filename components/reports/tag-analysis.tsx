@@ -2,6 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
+import { Transaction } from "@/types"
+import { DateRange } from "react-day-picker"
+
+interface TagAnalysisProps {
+  transactions: Transaction[];
+  dateRange?: DateRange;
+}
 
 const data = [
   { name: "groceries", amount: 400 },
@@ -11,7 +18,7 @@ const data = [
   { name: "travel", amount: 100 },
 ]
 
-export function TagAnalysis() {
+export function TagAnalysis({ transactions, dateRange }: TagAnalysisProps) {
   return (
     <Card>
       <CardHeader>

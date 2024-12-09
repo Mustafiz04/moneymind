@@ -18,12 +18,13 @@ export function TransactionChart({ period, dateRange, transactions }: Transactio
     
     // Filter by date range if provided
     if (dateRange?.from) {
+      const fromDate = dateRange.from
       filteredTransactions = filteredTransactions.filter(t => {
         const date = new Date(t.date)
         if (dateRange.to) {
-          return date >= dateRange.from && date <= dateRange.to
+          return date >= fromDate && date <= dateRange.to
         }
-        return date >= dateRange.from
+        return date >= fromDate
       })
     }
 

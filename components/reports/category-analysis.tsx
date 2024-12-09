@@ -2,6 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
+import { Transaction } from "@/types"
+import { DateRange } from "react-day-picker"
+
+interface CategoryAnalysisProps {
+  transactions: Transaction[];
+  dateRange?: DateRange;
+}
 
 const data = [
   { name: "Food", value: 400 },
@@ -12,7 +19,7 @@ const data = [
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042']
 
-export function CategoryAnalysis() {
+export function CategoryAnalysis({ transactions, dateRange }: CategoryAnalysisProps) {
   return (
     <Card>
       <CardHeader>

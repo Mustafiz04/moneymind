@@ -1,7 +1,14 @@
 import { Transaction } from "@/types"
 import { format } from "date-fns"
 import jsPDF from "jspdf"
-import "jspdf-autotable"
+import autoTable from 'jspdf-autotable'
+
+// Add type augmentation for jsPDF
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => void;
+  }
+}
 
 export const exportToCSV = (transactions: Transaction[]) => {
   // Format transactions for CSV
@@ -57,13 +64,13 @@ export const exportToPDF = (transactions: Transaction[]) => {
 
   // Add table
   doc.autoTable({
+    startY: 30,
     head: [["Date", "Type", "Category", "Amount", "Tags", "Notes"]],
     body: tableData,
-    startY: 30,
     styles: { fontSize: 8 },
     headStyles: { fillColor: [51, 51, 51] },
     alternateRowStyles: { fillColor: [245, 245, 245] }
-  })
+})
 
   // Save PDF
   doc.save(`transactions_${format(new Date(), "yyyy-MM-dd")}.pdf`)

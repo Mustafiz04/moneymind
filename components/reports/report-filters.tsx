@@ -12,7 +12,7 @@ import { format } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { useState } from "react"
 import { DateRange } from "react-day-picker"
-import { ReportFilters } from "@/types"
+import type { ReportFilters } from "@/types"
 
 interface ReportFiltersProps {
   onFiltersChange: (filters: ReportFilters) => void;

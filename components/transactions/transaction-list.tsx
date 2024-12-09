@@ -20,6 +20,7 @@ import { MoreHorizontal, Pencil, Trash } from "lucide-react"
 import { format } from "date-fns"
 import { Transaction } from "@/types"
 import { cn } from "@/lib/utils"
+import { DateRange } from "react-day-picker"
 
 const transactions = [
   {
@@ -70,13 +71,14 @@ export function TransactionList({ filters }: TransactionListProps) {
 
     // Filter by date range
     if (filters.dateRange?.from) {
+      const fromDate = filters.dateRange.from
+      const toDate = filters.dateRange.to
       filtered = filtered.filter(t => {
         const transactionDate = new Date(t.date)
-        if (filters.dateRange?.to) {
-          return transactionDate >= filters.dateRange.from && 
-                 transactionDate <= filters.dateRange.to
+        if (toDate) {
+          return transactionDate >= fromDate && transactionDate <= toDate
         }
-        return transactionDate >= filters.dateRange.from
+        return transactionDate >= fromDate
       })
     }
 
