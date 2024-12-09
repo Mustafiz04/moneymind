@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Plus, FileText, History } from "lucide-react"
+import { Plus, FileText, History, Coins, Tags } from "lucide-react"
 import Link from "next/link"
 
 export function QuickActions() {
@@ -16,6 +16,18 @@ export function QuickActions() {
           <Link href="/dashboard/transactions/new">
             <Plus className="mr-2 h-4 w-4" />
             Add Transaction
+          </Link>
+        </Button>
+        <Button asChild className="w-full justify-start" variant="outline">
+          <Link href="/dashboard/settings?tab=categories">
+            <Tags className="mr-2 h-4 w-4" />
+            Manage Categories
+          </Link>
+        </Button>
+        <Button asChild className="w-full justify-start" variant="outline">
+          <Link href="/dashboard/settings">
+            <Coins className="mr-2 h-4 w-4" />
+            Change Currency
           </Link>
         </Button>
         <Button asChild className="w-full justify-start" variant="outline">
