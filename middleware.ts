@@ -1,39 +1,12 @@
-import { authMiddleware, clerkClient } from "@clerk/nextjs"
-import { supabase } from "@/lib/supabase"
+import { authMiddleware } from "@clerk/nextjs"
 
 export default authMiddleware({
-  publicRoutes: ["/"],
-  async afterAuth(auth, req, evt) {
-    if (!auth.userId) return;
-
-    // try {
-    //   // Get user from Clerk
-    //   const user = await clerkClient.users.getUser(auth.userId);
-      
-    //   // Upsert user in Supabase using clerk_id as conflict key
-    //   const { error } = await supabase
-    //     .from('users')
-    //     .upsert({
-    //       id: user.id,
-    //       clerk_id: user.id,
-    //       email: user.emailAddresses[0]?.emailAddress,
-    //       name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-    //       image_url: user.imageUrl,
-    //     }, {
-    //       onConflict: 'clerk_id',
-    //       ignoreDuplicates: true
-    //     })
-
-    //   if (error) {
-    //     console.error('Error syncing user to Supabase:', error)
-    //   }
-
-    // } catch (error) {
-    //   console.error('Error in afterAuth middleware:', error)
-    // }
+  publicRoutes: ["/", "/api/webhooks/clerk"],
+  afterAuth(auth, req) {
+    console.log("Auth state:", auth.userId, req.url)
   }
 })
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
+  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
 }

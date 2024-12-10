@@ -3,6 +3,46 @@ import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { DEFAULT_CATEGORIES } from '@/lib/constants'
+
+async function createDefaultCategories(userId: string) {
+  try {
+    console.log('Creating default categories for user:', userId)
+    
+    // First check if user already has categories
+    const { data: existingCategories } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1)
+
+    if (existingCategories?.length) {
+      console.log('User already has categories, skipping creation')
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('categories')
+      .insert(
+        DEFAULT_CATEGORIES.map(category => ({
+          name: category.name,
+          type: category.type,
+          user_id: userId
+        }))
+      )
+      .select()
+
+    if (error) {
+      console.error('Error creating categories:', error)
+      throw error
+    }
+
+    console.log('Successfully created categories:', data?.length)
+  } catch (error) {
+    console.error('Failed to create default categories:', error)
+    throw error // Re-throw to handle in the webhook
+  }
+}
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET
@@ -49,25 +89,54 @@ export async function POST(req: Request) {
   // Handle the webhook
   const eventType = evt.type;
   
-  if (eventType === 'user.created' || eventType === 'user.updated') {
-    const { id, email_addresses, first_name, last_name, image_url } = evt.data;
-    const email = email_addresses[0]?.email_address;
+  if (eventType === 'user.created') {
+    try {
+      console.log('Processing user.created event for user:', evt.data.id)
+      
+      const { id, email_addresses, first_name, last_name, image_url } = evt.data;
+      const email = email_addresses[0]?.email_address;
 
-    const { error } = await supabase
-      .from('users')
-      .upsert({
-        id: id,
-        clerk_id: id,
-        email: email,
-        name: [first_name, last_name].filter(Boolean).join(' '),
-        image_url: image_url,
+      // Create user in Supabase
+      const { error: userError } = await supabase
+        .from('users')
+        .insert({
+          id,
+          clerk_id: id,
+          email,
+          name: [first_name, last_name].filter(Boolean).join(' '),
+          image_url,
+          currency_symbol: '₹'
+        })
+
+      if (userError) {
+        console.error('Error creating user in Supabase:', userError)
+        return new NextResponse(JSON.stringify({ error: userError }), { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+
+      // Create default categories
+      await createDefaultCategories(id)
+      
+      console.log('Successfully processed user creation and categories')
+      
+      return new NextResponse(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
       })
 
-    if (error) {
-      console.error('Error saving user to Supabase:', error)
-      return new NextResponse('Error occurred', { status: 500 })
+    } catch (error) {
+      console.error('Error in webhook processing:', error)
+      return new NextResponse(JSON.stringify({ error }), { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
   }
 
-  return new NextResponse('Success', { status: 200 })
-} 
+  return new NextResponse(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })
+}
