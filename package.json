@@ -29,6 +29,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.0.0",
     "date-fns": "^2.30.0",
+    "googleapis": "^144.0.0",
+    "googleapis-common": "^7.2.0",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
     "lucide-react": "^0.302.0",

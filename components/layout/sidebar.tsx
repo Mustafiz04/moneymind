@@ -10,7 +10,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  UserCircle2
+  UserCircle2,
+  Network,
 } from "lucide-react"
 import { useClerk } from "@clerk/nextjs"
 import { cn } from "@/lib/utils"
@@ -36,6 +37,11 @@ const routes = [
     label: 'Reports',
     icon: BarChart3,
     href: '/dashboard/reports',
+  },
+  {
+    label: "Connect",
+    icon: Network,
+    href: "/dashboard/connect",
   },
   {
     label: 'Profile',
